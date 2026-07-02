@@ -7,3 +7,4 @@
 # 工夫した点
 　動き
 # スクショ
+<img width="2880" height="1406" alt="スクリーンショット 2026-07-02 180213" src="https://github.com/user-attachments/assets/1793c257-08e8-419c-b71c-43483f70f15d" />
