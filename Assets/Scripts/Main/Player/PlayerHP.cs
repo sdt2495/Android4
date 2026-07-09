@@ -31,6 +31,9 @@ public class PlayerHP : MonoBehaviour
     {
         currentHP -= dmg;
 
+        // ƒJƒƒ‰‚ğ—h‚ç‚·
+        CameraShake.Instance?.Shake(0.18f, 0.18f);
+
         if (hpBar != null)
             hpBar.value = currentHP;
 

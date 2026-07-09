@@ -1,39 +1,64 @@
-using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
+using System.Collections;
 
 public class Enemy : MonoBehaviour
 {
-    public int hp = 30;
+    [Header("HP")]
+    public int maxHP = 30;
+    public int currentHP;
+
+    [Header("UI")]
+    public Slider hpBar;
+
+    [Header("見た目")]
     public Renderer model;
-    public Animator animator;
+    private Animator anim;
 
     private Color originalColor;
 
-    void Start()
+    void Awake()
     {
+        anim = GetComponent<Animator>();
+
+        currentHP = maxHP;
+
+        if (hpBar != null)
+        {
+            hpBar.maxValue = maxHP;
+            hpBar.value = currentHP;
+        }
+
         originalColor = model.material.color;
     }
 
     public void TakeDamage(int dmg)
     {
-        hp -= dmg;
+        currentHP -= dmg;
 
-        // 赤く光る
-        StartCoroutine(HitEffect());
+        // カメラを揺らす
+        CameraShake.Instance?.Shake(0.12f, 0.4f);
 
-        // 被ダメアニメ
-        animator.SetTrigger("Hit");
+        // HPバー更新
+        if (hpBar != null)
+            hpBar.value = currentHP;
 
-        // ★ Player に攻撃された瞬間に反撃
-        animator.SetTrigger("Attack1");
+        // 赤色点滅
+        StartCoroutine(HitEffectRed());
 
-        if (hp <= 0)
+        // ダメージアニメ
+        anim.SetTrigger("Hit");
+
+        // 反撃アニメ
+        anim.SetTrigger("Attack1");
+
+        if (currentHP <= 0)
         {
             Die();
         }
     }
 
-    IEnumerator HitEffect()
+    IEnumerator HitEffectRed()
     {
         model.material.color = Color.red;
         yield return new WaitForSeconds(0.1f);
@@ -42,6 +67,6 @@ public class Enemy : MonoBehaviour
 
     void Die()
     {
-        animator.SetTrigger("Die");
+        anim.SetTrigger("Die");
     }
 }

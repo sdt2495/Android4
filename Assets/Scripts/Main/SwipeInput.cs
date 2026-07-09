@@ -2,18 +2,22 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.EnhancedTouch;
+
 using Touch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 
 public class SwipeInput : MonoBehaviour
 {
+    [Header("イベント")]
     public UnityEvent<Vector2> OnSwipe;
+
+    [Header("設定")]
+    [SerializeField] private float minSwipeDistance = 50f;
 
     private Vector2 startPos;
     private Vector2 currentPos;
-    private bool isDragging = false;
-    private float minSwipeDistance = 50f;
 
-    private bool initialized = false; // ← 起動直後のゴースト入力防止
+    private bool isDragging;
+    private bool initialized;
 
     void OnEnable()
     {
@@ -27,81 +31,98 @@ public class SwipeInput : MonoBehaviour
 
     void Update()
     {
-        // ============================
-        // 起動直後のゴースト入力を1回だけ無視
-        // ============================
+#if UNITY_EDITOR
+
+        // 起動直後のゴースト入力防止
         if (!initialized)
         {
-            if (Mouse.current == null || Mouse.current.leftButton.isPressed == false)
+            if (Mouse.current == null || !Mouse.current.leftButton.isPressed)
                 initialized = true;
 
             return;
         }
 
-        // ============================
-        // PC（マウス）用
-        // ============================
-        if (!Application.isMobilePlatform)
-        {
-            if (Mouse.current.leftButton.wasPressedThisFrame)
-            {
-                startPos = Mouse.current.position.ReadValue();
-                currentPos = startPos; // ← これが誤発火を完全に防ぐ
-                isDragging = true;
-            }
-            else if (Mouse.current.leftButton.isPressed && isDragging)
-            {
-                currentPos = Mouse.current.position.ReadValue();
-            }
-            else if (Mouse.current.leftButton.wasReleasedThisFrame)
-            {
-                if (isDragging)
-                {
-                    Vector2 diff = currentPos - startPos;
-                    if (diff.magnitude >= minSwipeDistance)
-                    {
-                        OnSwipe?.Invoke(diff.normalized);
-                    }
-                }
+        UpdateMouseInput();
 
-                isDragging = false;
-            }
+#else
 
+        UpdateTouchInput();
+
+#endif
+    }
+
+    //==============================
+    // エディタ・PC
+    //==============================
+    private void UpdateMouseInput()
+    {
+        if (Mouse.current == null)
             return;
-        }
 
-        // ============================
-        // スマホ（タッチ）用
-        // ============================
-        var touches = Touch.activeTouches;
-
-        if (touches.Count == 0)
+        if (Mouse.current.leftButton.wasPressedThisFrame)
         {
-            isDragging = false;
-            return;
-        }
-
-        var t = touches[0];
-
-        if (t.phase == UnityEngine.InputSystem.TouchPhase.Began)
-        {
-            startPos = t.screenPosition;
+            startPos = Mouse.current.position.ReadValue();
             currentPos = startPos;
             isDragging = true;
         }
-        else if (t.phase == UnityEngine.InputSystem.TouchPhase.Moved && isDragging)
+
+        if (Mouse.current.leftButton.isPressed && isDragging)
         {
-            currentPos = t.screenPosition;
+            currentPos = Mouse.current.position.ReadValue();
         }
-        else if (t.phase == UnityEngine.InputSystem.TouchPhase.Ended && isDragging)
+
+        if (Mouse.current.leftButton.wasReleasedThisFrame && isDragging)
         {
-            Vector2 diff = currentPos - startPos;
-            if (diff.magnitude >= minSwipeDistance)
-            {
-                OnSwipe?.Invoke(diff.normalized);
-            }
+            currentPos = Mouse.current.position.ReadValue();
+
+            CheckSwipe();
 
             isDragging = false;
+        }
+    }
+
+    //==============================
+    // スマホ
+    //==============================
+    private void UpdateTouchInput()
+    {
+        if (Touch.activeTouches.Count == 0)
+            return;
+
+        Touch touch = Touch.activeTouches[0];
+
+        if (touch.phase == UnityEngine.InputSystem.TouchPhase.Began)
+        {
+            startPos = touch.screenPosition;
+            currentPos = startPos;
+            isDragging = true;
+        }
+
+        if (touch.phase == UnityEngine.InputSystem.TouchPhase.Moved && isDragging)
+        {
+            currentPos = touch.screenPosition;
+        }
+
+        if (touch.phase == UnityEngine.InputSystem.TouchPhase.Ended && isDragging)
+        {
+            currentPos = touch.screenPosition;
+
+            CheckSwipe();
+
+            isDragging = false;
+        }
+    }
+
+    //==============================
+    // スワイプ判定
+    //==============================
+    private void CheckSwipe()
+    {
+        Vector2 diff = currentPos - startPos;
+
+        if (diff.magnitude >= minSwipeDistance)
+        {
+            OnSwipe?.Invoke(diff.normalized);
         }
     }
 }
