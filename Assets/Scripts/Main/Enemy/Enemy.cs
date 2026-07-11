@@ -11,11 +11,15 @@ public class Enemy : MonoBehaviour
     [Header("UI")]
     public Slider hpBar;
 
+    [Header("Result")]
+    public GameObject resultPanel;
+
     [Header("見た目")]
     public Renderer model;
-    private Animator anim;
 
+    private Animator anim;
     private Color originalColor;
+    private bool isDead = false;
 
     void Awake()
     {
@@ -29,11 +33,20 @@ public class Enemy : MonoBehaviour
             hpBar.value = currentHP;
         }
 
-        originalColor = model.material.color;
+        if (model != null)
+            originalColor = model.material.color;
+
+        // リザルトパネルを非表示
+        if (resultPanel != null)
+            resultPanel.SetActive(false);
     }
 
     public void TakeDamage(int dmg)
     {
+        // 死亡後は何もしない
+        if (isDead)
+            return;
+
         currentHP -= dmg;
 
         // カメラを揺らす
@@ -41,20 +54,23 @@ public class Enemy : MonoBehaviour
 
         // HPバー更新
         if (hpBar != null)
-            hpBar.value = currentHP;
+            hpBar.value = Mathf.Max(currentHP, 0);
 
         // 赤色点滅
-        StartCoroutine(HitEffectRed());
+        if (model != null)
+            StartCoroutine(HitEffectRed());
 
         // ダメージアニメ
-        anim.SetTrigger("Hit");
-
-        // 反撃アニメ
-        anim.SetTrigger("Attack1");
+        if (anim != null)
+        {
+            anim.SetTrigger("Hit");
+            anim.SetTrigger("Attack1");
+        }
 
         if (currentHP <= 0)
         {
-            Die();
+            isDead = true;
+            StartCoroutine(DieRoutine());
         }
     }
 
@@ -65,8 +81,20 @@ public class Enemy : MonoBehaviour
         model.material.color = originalColor;
     }
 
-    void Die()
+    IEnumerator DieRoutine()
     {
-        anim.SetTrigger("Die");
+        // 死亡アニメ
+        if (anim != null)
+            anim.SetTrigger("Die");
+
+        // 死亡アニメ待ち
+        yield return new WaitForSeconds(2f);
+
+        // リザルトパネル表示
+        if (resultPanel != null)
+            resultPanel.SetActive(true);
+
+        // ゲーム停止
+        Time.timeScale = 0f;
     }
 }
